@@ -444,7 +444,7 @@ export const UploadScheduleModal: React.FC<UploadScheduleModalProps> = ({
                     <span className="font-code-sm text-code-sm font-bold bg-secondary-fixed text-on-secondary-fixed-variant px-2 py-0.5 rounded-full">
                       Hall E-204
                     </span>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant mt-0.5">East Wing</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant mt-0.5">CSE Wing</span>
                   </div>
                 </div>
 
@@ -470,7 +470,7 @@ export const UploadScheduleModal: React.FC<UploadScheduleModalProps> = ({
                     <span className="font-code-sm text-code-sm font-bold bg-secondary-fixed text-on-secondary-fixed-variant px-2 py-0.5 rounded-full">
                       Lab 4B
                     </span>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant mt-0.5">Turing Block</span>
+                    <span className="font-label-sm text-label-sm text-on-surface-variant mt-0.5">SRiX MakerSpace</span>
                   </div>
                 </div>
 

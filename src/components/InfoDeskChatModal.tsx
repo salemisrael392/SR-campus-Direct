@@ -36,9 +36,9 @@ export const InfoDeskChatModal: React.FC<InfoDeskChatModalProps> = ({
   if (!isOpen) return null;
 
   const quickPrompts = [
-    'How do I find Room 204 in Newton Hall?',
+    'How do I find Room 204 in SREC CSE Block?',
     'Where is the step-free elevator to Level 2?',
-    'When does the East Wing shuttle arrive?'
+    'When does the Campus Shuttle arrive at Gate 1?'
   ];
 
   const handleSend = (textToSend?: string) => {
@@ -56,28 +56,28 @@ export const InfoDeskChatModal: React.FC<InfoDeskChatModalProps> = ({
     if (!textToSend) setInputVal('');
 
     setTimeout(() => {
-      let reply = 'Our Student Ambassadors in blue vests are stationed at Newton Quad if you need personal assistance!';
+      let reply = 'Our Student Ambassadors in blue vests are stationed at SREC Main Quad if you need personal assistance!';
       let action: ChatMessage['action'] = undefined;
 
       const lower = text.toLowerCase();
-      if (lower.includes('204') || lower.includes('newton')) {
+      if (lower.includes('204') || lower.includes('cse') || lower.includes('cs') || lower.includes('computer')) {
         reply =
-          'Room 204 is on the 2nd Floor of Newton Hall (Computing Wing). Take Staircase B or Elevator B behind the atrium coffee kiosk, then turn left.';
+          'Room 204 is on the 2nd Floor of SREC Computer Science Block. Take Staircase B or the CSE lobby elevator, then turn left along the corridor.';
         action = {
-          label: 'Direct to Newton Hall 204',
-          dest: 'Newton Hall • Room 204 (Level 2)',
+          label: 'Direct to SREC CSE 204',
+          dest: 'SREC Computer Science Block • Room 204 (Level 2)',
           room: 'Room 204'
         };
       } else if (lower.includes('elevator') || lower.includes('step-free')) {
         reply =
-          'The primary step-free elevator is located in the Central Atrium of Newton Hall directly behind the coffee kiosk. It connects Ground, L1, L2, and L3.';
-      } else if (lower.includes('shuttle')) {
+          'The primary step-free elevator is located in the Central Concourse of SREC Academic Block and connects Ground, L1, L2, and L3.';
+      } else if (lower.includes('shuttle') || lower.includes('gate 1')) {
         reply =
-          'The East Station 02 Campus Shuttle (Blue Line) departs every 8 minutes. Next arrival is in 3 minutes.';
+          'The Campus Shuttle departs Main Entrance (Gate 1) every 8 minutes. Next arrival is in 3 minutes.';
         action = {
-          label: 'Route to Shuttle Stop',
-          dest: 'Campus Shuttle Stop (East)',
-          room: 'Station 02'
+          label: 'Route to Gate 1 Shuttle Stop',
+          dest: 'Main Campus Entrance (Gate 1)',
+          room: 'GATE-01'
         };
       }
 
@@ -111,7 +111,7 @@ export const InfoDeskChatModal: React.FC<InfoDeskChatModalProps> = ({
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <p className="font-label-sm text-label-sm text-on-surface-variant">
-                Live Support • Newton Quad Ambassadors
+                Live Support • SREC Main Quad Ambassadors
               </p>
             </div>
           </div>

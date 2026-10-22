@@ -120,7 +120,7 @@ export const Floorplan2DView: React.FC<Floorplan2DViewProps> = ({
       <div className="relative z-10 flex items-center justify-between w-full">
         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-container-lowest/95 backdrop-blur-md shadow-sm font-label-sm text-label-sm text-primary">
           <span className="material-symbols-outlined text-[15px] text-secondary">wifi_find</span>
-          Indoor Beacon: Newton-L2-Core
+          Indoor Beacon: SREC-CSE-L2-Core
         </span>
         <button
           onClick={() => setIsFullscreen(prev => !prev)}

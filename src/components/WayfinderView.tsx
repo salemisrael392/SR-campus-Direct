@@ -1,6 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { RouteMode, FloorLevel, NavigationStep } from '../types';
-import { TURN_BY_TURN_STEPS } from '../data/campusData';
+import { UNIVERSITY_INFO } from '../data/campusData';
+import {
+  computeCampusWalkingRoute,
+  CampusPOI,
+  CAMPUS_POIS
+} from '../data/campusRouting';
+import { CampusLocationInput } from './CampusLocationInput';
+import { GoogleMapView } from './GoogleMapView';
 import { Wayfinder3DView } from './Wayfinder3DView';
 import { Floorplan2DView } from './Floorplan2DView';
 
@@ -14,8 +21,8 @@ interface WayfinderViewProps {
 }
 
 export const WayfinderView: React.FC<WayfinderViewProps> = ({
-  origin = 'Student Center Plaza (Fountain)',
-  destination = 'Newton Hall • Room 204 (Level 2)',
+  origin = 'Main Campus Entrance (Gate 1)',
+  destination = 'SREC Computer Science & AI Block',
   onShowToast,
   onStartVoiceNav,
   onOpenChatSupport,
@@ -23,31 +30,29 @@ export const WayfinderView: React.FC<WayfinderViewProps> = ({
 }) => {
   const [startPos, setStartPos] = useState(origin);
   const [destPos, setDestPos] = useState(destination);
-  const [isSwapped, setIsSwapped] = useState(false);
   const [routeMode, setRouteMode] = useState<RouteMode>('fast');
-  const [viewMode, setViewMode] = useState<'3d' | '2d'>('3d');
+  const [viewMode, setViewMode] = useState<'map' | '3d' | '2d'>('map');
   const [selectedLevel, setSelectedLevel] = useState<FloorLevel>('L2');
-  const [isNorthLocked, setIsNorthLocked] = useState(true);
-  const [steps, setSteps] = useState<NavigationStep[]>(TURN_BY_TURN_STEPS);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+
+  // Compute live campus walking route
+  const routeResult = useMemo(() => {
+    return computeCampusWalkingRoute(startPos, destPos, routeMode === 'accessible');
+  }, [startPos, destPos, routeMode]);
 
   const handleSwap = () => {
-    setIsSwapped(prev => !prev);
     const temp = startPos;
     setStartPos(destPos);
     setDestPos(temp);
     onShowToast('Inverted start point and destination');
   };
 
-  const handleToggleNorth = () => {
-    setIsNorthLocked(prev => !prev);
-    onShowToast(isNorthLocked ? 'Compass auto-rotation unlocked' : 'Locked orientation to Geographic North');
-  };
-
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'SR University Campus Wayfinder Route',
-        text: `Walking route to ${destPos} (4 min walk)`
+        title: 'SR University Campus Route',
+        text: `Route from ${startPos} to ${destPos} (${routeResult.estimatedMinutes} min walk, ${routeResult.totalDistanceMeters}m)`
       }).catch(() => {});
     } else {
       navigator.clipboard?.writeText(window.location.href);
@@ -55,440 +60,314 @@ export const WayfinderView: React.FC<WayfinderViewProps> = ({
     }
   };
 
+  // Real GPS Geolocation for Origin
+  const handleUseCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      onShowToast('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setIsLocating(true);
+    onShowToast('Detecting your live campus location...');
+
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setIsLocating(false);
+        const { latitude, longitude } = pos.coords;
+        const isNearCampus =
+          latitude >= 18.02 && latitude <= 18.06 &&
+          longitude >= 79.55 && longitude <= 79.60;
+
+        let detected = { lat: latitude, lng: longitude };
+        if (!isNearCampus) {
+          detected = { lat: 18.04092, lng: 79.57765 };
+          setStartPos('Main Campus Entrance (Gate 1)');
+          onShowToast('GPS active • Pinpointed at Campus Entrance (Gate 1)');
+        } else {
+          setStartPos('Your Live Campus Position');
+          onShowToast('Using your real-time campus coordinates!');
+        }
+
+        setUserLocation(detected);
+      },
+      err => {
+        setIsLocating(false);
+        setStartPos('Main Campus Entrance (Gate 1)');
+        setUserLocation({ lat: 18.04092, lng: 79.57765 });
+        onShowToast('Defaulted to Campus Entrance (Gate 1)');
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  const getStepIcon = (type: NavigationStep['type']) => {
+    switch (type) {
+      case 'turn_right':
+        return 'turn_right';
+      case 'turn_left':
+        return 'turn_left';
+      case 'stairs':
+        return 'stairs';
+      case 'elevator':
+        return 'elevator';
+      case 'arrival':
+        return 'check_circle';
+      case 'straight':
+      default:
+        return 'straight';
+    }
+  };
+
+  const handleMapSelectDestination = useCallback((name: string) => {
+    setDestPos(name);
+    onShowToast(`Routing to ${name}...`);
+  }, [onShowToast]);
+
   return (
-    <div className="flex flex-col w-full px-gutter pb-8 gap-space-lg">
-      {/* Wayfinder Header Strip & Compass Branding */}
-      <div className="flex items-center justify-between pt-space-sm">
-        <div className="flex items-center gap-space-sm">
-          <div className="w-9 h-9 rounded-full bg-surface-container-high flex items-center justify-center text-secondary shadow-sm">
-            <span className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-              explore
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="font-title-sm text-title-sm text-on-surface tracking-tight font-semibold">
-              Indoor &amp; Campus Navigator
-            </span>
-            <span className="font-label-sm text-label-sm text-on-surface-variant flex items-center gap-1 font-medium">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Campus RTLS High Precision GPS Active
-            </span>
-          </div>
-        </div>
+    <div className="flex flex-col w-full space-y-4">
+      {/* Route Direction Input Header Card */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Origin & Destination Editable Inputs */}
+          <div className="flex-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {/* Origin Input with Autocomplete & Geolocation */}
+            <CampusLocationInput
+              label="Starting point"
+              value={startPos}
+              isOrigin={true}
+              onChangeValue={setStartPos}
+              onSelectPOI={poi => setStartPos(poi.name)}
+              onUseCurrentLocation={handleUseCurrentLocation}
+              isLocating={isLocating}
+              placeholder="Type start point (e.g. Gate 1, Hostels)..."
+            />
 
-        <button
-          onClick={handleToggleNorth}
-          aria-label="Calibrate Compass"
-          className="flex items-center gap-1 px-space-sm py-1 rounded-full bg-surface-container-lowest text-secondary shadow-sm hover:bg-surface-container transition-all active:scale-95 font-semibold"
-          id="toggleCompassBtn"
-        >
-          <span className={`material-symbols-outlined text-[16px] transition-transform ${isNorthLocked ? 'text-secondary' : 'rotate-45'}`}>
-            navigation
-          </span>
-          <span className="font-label-sm text-label-sm">
-            {isNorthLocked ? 'Live North' : 'Heading'}
-          </span>
-        </button>
-      </div>
-
-      {/* Origin & Destination Planner Box */}
-      <div className="relative bg-surface-container-lowest rounded-xl p-space-md shadow-sm">
-        <div className="flex flex-col gap-space-sm">
-          {/* Origin Field */}
-          <div className="flex items-center gap-space-md p-space-sm rounded-lg bg-surface-container-low transition-colors">
-            <div className="flex flex-col items-center justify-center shrink-0 w-6">
-              <span className="relative flex h-3.5 w-3.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75" />
-                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-secondary" />
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="font-label-sm text-label-sm text-on-surface-variant block uppercase tracking-wider font-semibold">
-                Start Position
-              </span>
-              <span className="font-title-sm text-title-sm text-on-surface truncate block font-bold">
-                {startPos}
-              </span>
-            </div>
-            <button
-              onClick={() => onShowToast('Locked to current live GPS beacon')}
-              className="shrink-0 text-secondary p-1 rounded-full hover:bg-surface-container-high transition-colors"
-              title="Use Precise Pin"
-            >
-              <span className="material-symbols-outlined text-[18px]">my_location</span>
-            </button>
-          </div>
-
-          {/* Connecting Node Line & Invert Button */}
-          <div className="relative flex items-center justify-center -my-2.5 z-10">
-            <div className="w-full flex items-center px-4">
-              <div className="h-4 w-0.5 bg-secondary/30 ml-2" />
-            </div>
+            {/* Swap Button */}
             <button
               onClick={handleSwap}
-              aria-label="Invert Route"
-              className={`absolute right-4 w-7 h-7 rounded-full bg-surface-container text-on-surface-variant shadow-sm flex items-center justify-center active:scale-90 transition-transform ${
-                isSwapped ? 'rotate-180 text-secondary' : ''
-              }`}
-              id="swapBtn"
+              aria-label="Reverse route"
+              className="w-8 h-8 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 flex items-center justify-center shrink-0 self-center transition-transform active:scale-90"
+              title="Reverse starting point and destination"
             >
-              <span className="material-symbols-outlined text-[16px]">swap_vert</span>
+              <span className="material-symbols-outlined text-[18px]">swap_horiz</span>
             </button>
+
+            {/* Destination Input with Autocomplete */}
+            <CampusLocationInput
+              label="Destination"
+              value={destPos}
+              isOrigin={false}
+              onChangeValue={setDestPos}
+              onSelectPOI={poi => setDestPos(poi.name)}
+              placeholder="Type destination (e.g. Room 204, CSE, SRiX)..."
+            />
           </div>
 
-          {/* Destination Field */}
-          <div className="flex items-center gap-space-md p-space-sm rounded-lg bg-surface-container-low">
-            <div className="flex items-center justify-center shrink-0 w-6 text-error">
-              <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                location_on
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <span className="font-label-sm text-label-sm text-on-surface-variant block uppercase tracking-wider font-semibold">
-                Destination
-              </span>
-              <span className="font-title-sm text-title-sm text-on-surface truncate block font-bold">
-                {destPos}
-              </span>
-            </div>
-            <span className="shrink-0 px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant font-code-sm text-code-sm font-semibold">
-              ENG WING
+          {/* Quick Route Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={onStartVoiceNav}
+              className="flex items-center gap-1.5 px-4 py-2 bg-secondary hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-all shadow-xs active:scale-98"
+            >
+              <span className="material-symbols-outlined text-[17px]">record_voice_over</span>
+              <span>Voice Guidance</span>
+            </button>
+
+            <button
+              onClick={handleShare}
+              className="w-9 h-9 rounded-lg border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center"
+              title="Share route link"
+            >
+              <span className="material-symbols-outlined text-[18px]">share</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Dynamic Route Stats & Preference Row */}
+        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-slate-900 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[16px] text-secondary">directions_walk</span>
+              <span>{routeResult.estimatedMinutes} min ({routeResult.totalDistanceMeters} m)</span>
+            </span>
+            <span className="text-slate-300">&bull;</span>
+            <span className="text-slate-600">
+              From {routeResult.originPOI.shortName} to {routeResult.destinationPOI.shortName}
             </span>
           </div>
-        </div>
 
-        {/* Route Profile Selector Pills */}
-        <div className="mt-space-md pt-space-xs flex items-center gap-space-xs overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => {
-              setRouteMode('fast');
-              onShowToast('Route profile: Fastest walk path (320m)');
-            }}
-            className={`route-tab px-space-md py-1.5 rounded-full font-label-md text-label-md flex items-center gap-1.5 shrink-0 shadow-sm transition-all ${
-              routeMode === 'fast'
-                ? 'bg-primary text-on-primary font-bold'
-                : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">directions_walk</span>
-            <span>Fastest (4m)</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setRouteMode('sheltered');
-              onShowToast('Route profile: Covered canopy walk during rain/sun (360m, 5m)');
-            }}
-            className={`route-tab px-space-md py-1.5 rounded-full font-label-md text-label-md flex items-center gap-1.5 shrink-0 transition-all ${
-              routeMode === 'sheltered'
-                ? 'bg-primary text-on-primary font-bold shadow-sm'
-                : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">umbrella</span>
-            <span>Covered Path</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setRouteMode('accessible');
-              onShowToast('Route profile: Step-Free ramp & elevator navigation enabled');
-            }}
-            className={`route-tab px-space-md py-1.5 rounded-full font-label-md text-label-md flex items-center gap-1.5 shrink-0 transition-all ${
-              routeMode === 'accessible'
-                ? 'bg-primary text-on-primary font-bold shadow-sm'
-                : 'bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">accessible</span>
-            <span>Step-Free Elevator</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Live Navigation Active Summary Banner */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary-container to-primary text-on-primary p-space-md shadow-md">
-        <div className="flex items-start justify-between relative z-10">
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-label-sm uppercase tracking-wider font-semibold">
-                Optimized
-              </span>
-              <span className="font-label-sm text-label-sm text-on-primary-container">Depart in 1m</span>
-            </div>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="font-headline-md text-headline-md tracking-tight font-bold">
-                {routeMode === 'sheltered' ? '5 min' : '4 min'}
-              </span>
-              <span className="font-body-md text-body-md text-on-primary-container">
-                • {routeMode === 'sheltered' ? '360' : '320'} meters walk
-              </span>
-            </div>
-            <p className="font-body-sm text-body-sm text-primary-fixed mt-0.5 flex items-center gap-1">
-              <span className="material-symbols-outlined text-[16px] text-tertiary-fixed-dim">schedule</span>
-              Target arrival:{' '}
-              <span className="font-title-sm text-title-sm text-on-primary font-bold">9:55 AM</span> (5 min before CS201)
-            </p>
-          </div>
-
-          <div className="flex flex-col items-end gap-1">
-            <div className="w-12 h-12 rounded-full bg-surface-container-lowest/10 backdrop-blur-md flex items-center justify-center text-on-primary">
-              <span className="material-symbols-outlined text-[28px] animate-bounce">arrow_upward</span>
-            </div>
-            <span className="font-label-sm text-label-sm text-primary-fixed-dim">Next: 120m</span>
-          </div>
-        </div>
-
-        {/* Ambient university seal compass watermark */}
-        <div className="absolute -right-6 -bottom-6 w-32 h-32 opacity-10 pointer-events-none text-on-primary">
-          <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="4" />
-            <polygon points="50,15 57,43 85,50 57,57 50,85 43,57 15,50 43,43" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Interactive 3D / AR Navigation & Floorplan View Container */}
-      <div className="flex flex-col gap-space-xs">
-        {/* View Mode & Floor Selector Bar */}
-        <div className="flex items-center justify-between gap-1 flex-wrap">
-          {/* View Mode Switcher */}
-          <div className="flex items-center gap-1 bg-surface-container-high rounded-lg p-0.5">
+          {/* Route Options (Fastest vs Step-Free) */}
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg">
             <button
               onClick={() => {
-                setViewMode('3d');
-                onShowToast('Switched to 3D AR Wayfinder view');
+                setRouteMode('fast');
+                onShowToast('Calculated fastest campus route');
               }}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded font-label-sm text-label-sm font-bold transition-all ${
-                viewMode === '3d'
-                  ? 'bg-secondary text-on-secondary shadow-sm'
-                  : 'text-on-surface-variant hover:text-primary'
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                routeMode === 'fast'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="material-symbols-outlined text-[14px]">view_in_ar</span>
-              <span>3D AR View</span>
+              Fastest Route
             </button>
             <button
               onClick={() => {
-                setViewMode('2d');
-                onShowToast('Switched to 2D Architectural Floorplan');
+                setRouteMode('accessible');
+                onShowToast('Accessibility mode: Step-free route with elevator selected');
               }}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded font-label-sm text-label-sm font-bold transition-all ${
-                viewMode === '2d'
-                  ? 'bg-secondary text-on-secondary shadow-sm'
-                  : 'text-on-surface-variant hover:text-primary'
+              className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors flex items-center gap-1 ${
+                routeMode === 'accessible'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <span className="material-symbols-outlined text-[14px]">map</span>
-              <span>Floorplan 2D</span>
+              <span className="material-symbols-outlined text-[14px]">accessible</span>
+              <span>Step-Free</span>
             </button>
           </div>
-
-          {/* Floor Level Selector */}
-          <div className="flex items-center gap-1 bg-surface-container-high rounded-lg p-0.5">
-            {(['Level 1', 'Level 2', 'Level 3'] as const).map(lvl => {
-              const code: FloorLevel = lvl === 'Level 1' ? 'L1' : lvl === 'Level 2' ? 'L2' : 'L3';
-              const isSelected = selectedLevel === code;
-              return (
-                <button
-                  key={lvl}
-                  onClick={() => {
-                    setSelectedLevel(code);
-                    onShowToast(`Viewing ${lvl} map layer`);
-                  }}
-                  className={`px-2 py-0.5 rounded font-label-sm text-label-sm transition-colors ${
-                    isSelected
-                      ? 'bg-surface-container-lowest text-secondary shadow-sm font-bold'
-                      : 'text-on-surface-variant hover:text-primary'
-                  }`}
-                >
-                  {lvl}
-                </button>
-              );
-            })}
-          </div>
         </div>
-
-        {/* View Section */}
-        {viewMode === '3d' ? (
-          <Wayfinder3DView destinationLabel="Room 204" remainingDistance="45m left" />
-        ) : (
-          <Floorplan2DView currentLevel={selectedLevel} onSelectLevel={setSelectedLevel} />
-        )}
       </div>
 
-      {/* Turn-by-Turn Route Guidance Card List */}
-      <div className="flex flex-col gap-space-sm">
-        <div className="flex items-center justify-between">
-          <span className="font-title-sm text-title-sm text-on-surface font-semibold">Step-by-Step Directions</span>
-          <span className="font-label-sm text-label-sm text-secondary font-semibold">
-            {steps.length} checkpoints
-          </span>
-        </div>
+      {/* Main Split Layout: Turn Steps (Left) + Route Visualization Canvas (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column: Turn-by-Turn Directions List (4 cols) */}
+        <div className="lg:col-span-4 bg-white rounded-xl border border-slate-200 p-4 shadow-xs">
+          <div className="flex items-center justify-between pb-2 mb-3 border-b border-slate-100">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Turn-by-Turn Guidance ({routeResult.steps.length})
+            </h3>
+            <span className="text-[11px] font-semibold text-secondary flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Campus RTLS Live</span>
+            </span>
+          </div>
 
-        {/* Step 1: Active Step */}
-        <div className="flex items-start gap-space-md p-space-md rounded-xl bg-surface-container-lowest shadow-sm relative overflow-hidden">
-          <div className="absolute left-0 top-0 bottom-0 w-1 bg-secondary" />
-          <div className="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-            <span className="material-symbols-outlined text-[18px]">straight</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-label-sm text-label-sm text-secondary uppercase font-bold tracking-wider">
-                Step 1 • Ongoing
-              </span>
-              <span className="font-code-sm text-code-sm text-on-surface-variant font-medium">120 meters</span>
-            </div>
-            <p className="font-title-sm text-title-sm text-on-surface mt-0.5 font-semibold">
-              Head North past the Clock Tower
-            </p>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-              Walk across the main stone walkway towards the Academic Quad garden archway.
-            </p>
-          </div>
-        </div>
+          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+            {routeResult.steps.map((step, idx) => (
+              <div
+                key={step.id}
+                className="flex items-start gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100"
+              >
+                {/* Step Icon */}
+                <div className="w-7 h-7 rounded-full bg-blue-50 text-secondary flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined text-[16px]">
+                    {getStepIcon(step.type)}
+                  </span>
+                </div>
 
-        {/* Step 2 */}
-        <div className="flex items-start gap-space-md p-space-md rounded-xl bg-surface-container-lowest shadow-sm">
-          <div className="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center shrink-0 mt-0.5">
-            <span className="material-symbols-outlined text-[18px]">turn_right</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-label-sm text-label-sm text-on-surface-variant uppercase font-semibold">
-                Step 2
-              </span>
-              <span className="font-code-sm text-code-sm text-on-surface-variant">60 meters</span>
-            </div>
-            <p className="font-title-sm text-title-sm text-on-surface mt-0.5 font-semibold">
-              Enter Newton Hall North Wing
-            </p>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-              Proceed through the automatic sliding glass doors into the main atrium.
-            </p>
-            <div className="mt-2 flex items-center gap-1.5">
-              <span className="px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label-sm text-label-sm flex items-center gap-1 font-medium">
-                <span className="material-symbols-outlined text-[14px]">door_front</span>
-                North Air-Lock Doors
-              </span>
-            </div>
-          </div>
-        </div>
+                {/* Instruction */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-slate-900 leading-snug">
+                    {step.title}
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    {step.distanceMeters}m &bull; {step.description}
+                  </p>
+                </div>
 
-        {/* Step 3: Indoor Vertical Transition */}
-        <div className="flex items-start gap-space-md p-space-md rounded-xl bg-surface-container-lowest shadow-sm">
-          <div className="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center shrink-0 mt-0.5">
-            <span className="material-symbols-outlined text-[18px]">stairs</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-label-sm text-label-sm text-on-surface-variant uppercase font-semibold">
-                Step 3 • Indoor Floor Change
-              </span>
-              <span className="font-code-sm text-code-sm text-secondary font-bold">To Level 2</span>
-            </div>
-            <p className="font-title-sm text-title-sm text-on-surface mt-0.5 font-semibold">
-              Ascend Staircase B or Central Elevator
-            </p>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-              Located immediately behind the Atrium Coffee Kiosk. Exit stairs onto the Level 2 breezeway.
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant font-code-sm text-code-sm font-semibold">
-                <span className="material-symbols-outlined text-[13px]">elevator</span>
-                Elevator B Accessible
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Step 4: Arrival */}
-        <div className="flex items-start gap-space-md p-space-md rounded-xl bg-surface-container-lowest shadow-sm">
-          <div className="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant flex items-center justify-center shrink-0 mt-0.5">
-            <span className="material-symbols-outlined text-[18px]">turn_left</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-label-sm text-label-sm text-on-surface-variant uppercase font-semibold">
-                Step 4 • Arrival
-              </span>
-              <span className="font-code-sm text-code-sm text-on-surface-variant">30 meters</span>
-            </div>
-            <p className="font-title-sm text-title-sm text-on-surface mt-0.5 font-semibold">Corridor to Room 204</p>
-            <p className="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-              Turn left down the math &amp; computing wing. Room 204 is on the right-hand side directly adjacent to Robotics Lab 202.
-            </p>
-
-            {/* Photo Preview for visual landmark */}
-            <div className="mt-2.5 flex items-center gap-2.5 p-2 rounded-lg bg-surface-container-low border border-surface-container-high/50">
-              <img
-                className="w-14 h-14 rounded-md object-cover shrink-0"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDif131rnoqJ-40fta5IVdrFmqx7g7yFqHdyFLnw0zY4DHFEWgytbKDM7Jy4GoniVNnk-92ul6UskNxOP5ePZGmcWVcLiafan1MFfgLYDbs6oyk150hHCEiC5NEy-aSVhFQAP1nX1mqltLeCG3V550OYZxuLA5mpEV-_p5XKru4ZemOB8Hwgk-Y5j99VrOv0pfrIpzeTbR5xfYuUBkpjKTRry9pKTs-p_2pReIUjRMnnEf10YXzlnoV"
-                alt="Room 204 entrance"
-              />
-              <div className="flex flex-col min-w-0">
-                <span className="font-label-sm text-label-sm text-primary font-bold truncate">
-                  Room 204 Entrance Visual
-                </span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant text-[12px] line-clamp-1">
-                  Look for the blue door placard with braille index.
+                <span className="text-[10px] font-mono font-medium text-slate-400 shrink-0">
+                  #{idx + 1}
                 </span>
               </div>
-            </div>
+            ))}
+          </div>
+
+          {/* Quick Help & SOS in Directions */}
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+            <button
+              onClick={onOpenChatSupport}
+              className="text-xs text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px] text-slate-400">chat</span>
+              <span>Need Help?</span>
+            </button>
+            <a
+              href={`tel:${UNIVERSITY_INFO.emergencyPhone}`}
+              className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px]">call</span>
+              <span>Campus Security</span>
+            </a>
           </div>
         </div>
-      </div>
 
-      {/* Campus Wayfinding Assistance & Security Callout */}
-      <div className="p-space-md rounded-xl bg-surface-container-high flex flex-col gap-space-sm shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-surface-container-lowest text-secondary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[16px]">support_agent</span>
+        {/* Right Column: Visual Spatial Route Canvas (8 cols) */}
+        <div className="lg:col-span-8 flex flex-col space-y-3">
+          {/* View Mode Toggle (Map vs 3D vs 2D) */}
+          <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-slate-200 shadow-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-secondary text-[18px]">visibility</span>
+              <span className="text-xs font-bold text-slate-800">Visual Route Mode:</span>
             </div>
-            <span className="font-title-sm text-title-sm text-on-surface font-semibold">
-              Need Help Finding Your Class?
-            </span>
-          </div>
-          <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">24/7 Desk</span>
-        </div>
-        <p className="font-body-sm text-body-sm text-on-surface-variant">
-          First week on campus? Information ambassadors in blue vests are stationed at Newton Quad. You can also contact campus security directly.
-        </p>
-        <div className="grid grid-cols-2 gap-space-sm pt-space-xs">
-          <button
-            onClick={onOpenChatSupport}
-            className="flex items-center justify-center gap-1.5 h-10 px-space-sm rounded-lg bg-surface-container-lowest text-on-surface hover:bg-surface-container shadow-sm active:scale-98 transition-all font-semibold"
-          >
-            <span className="material-symbols-outlined text-[18px] text-secondary">chat</span>
-            <span className="font-label-md text-label-md">Info Desk Chat</span>
-          </button>
-          <button
-            onClick={onCallSecurity}
-            className="flex items-center justify-center gap-1.5 h-10 px-space-sm rounded-lg bg-primary text-on-primary hover:bg-primary-container shadow-sm active:scale-98 transition-all font-semibold"
-          >
-            <span className="material-symbols-outlined text-[18px]">call</span>
-            <span className="font-label-md text-label-md">Call Security</span>
-          </button>
-        </div>
-      </div>
 
-      {/* Action Bar: Recenter & Finish */}
-      <div className="flex items-center gap-space-sm pt-space-xs">
-        <button
-          onClick={onStartVoiceNav}
-          className="flex-1 h-12 rounded-xl bg-secondary text-on-secondary font-label-lg text-label-lg flex items-center justify-center gap-2 shadow-md hover:bg-secondary-container active:scale-98 transition-all font-bold"
-        >
-          <span className="material-symbols-outlined text-[20px]">play_arrow</span>
-          <span>Start Turn-by-Turn Voice</span>
-        </button>
-        <button
-          onClick={handleShare}
-          aria-label="Share Route"
-          className="w-12 h-12 rounded-xl bg-surface-container-lowest text-on-surface-variant flex items-center justify-center shadow-sm hover:text-primary active:scale-95 transition-all"
-        >
-          <span className="material-symbols-outlined text-[20px]">share</span>
-        </button>
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-lg">
+              <button
+                onClick={() => setViewMode('map')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors flex items-center gap-1 ${
+                  viewMode === 'map'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">map</span>
+                <span>Google Map</span>
+              </button>
+              <button
+                onClick={() => setViewMode('3d')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors flex items-center gap-1 ${
+                  viewMode === '3d'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">view_in_ar</span>
+                <span>3D Pathway</span>
+              </button>
+              <button
+                onClick={() => setViewMode('2d')}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors flex items-center gap-1 ${
+                  viewMode === '2d'
+                    ? 'bg-white text-slate-900 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">floor</span>
+                <span>Floor Plan</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Visualization Container */}
+          {viewMode === 'map' && (
+            <GoogleMapView
+              routeStart={routeResult.originPOI}
+              routeEnd={routeResult.destinationPOI}
+              routePolyline={routeResult.pathCoordinates}
+              userLocation={userLocation}
+              onUserLocationDetected={setUserLocation}
+              onSelectDestination={handleMapSelectDestination}
+              onShowToast={onShowToast}
+            />
+          )}
+
+          {viewMode === '3d' && (
+            <Wayfinder3DView
+              destinationLabel={destPos}
+              remainingDistance={`${routeResult.totalDistanceMeters}m (${routeResult.estimatedMinutes} min walk)`}
+              onRecenter={() => onShowToast('Recalibrated AR sensor')}
+            />
+          )}
+
+          {viewMode === '2d' && (
+            <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+              <Floorplan2DView
+                currentLevel={selectedLevel}
+                onSelectLevel={setSelectedLevel}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

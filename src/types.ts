@@ -1,4 +1,4 @@
-export type TabType = 'explore' | 'timetable' | 'wayfinder' | 'profile';
+export type TabType = 'explore' | 'timetable' | 'wayfinder' | 'directory' | 'profile';
 
 export type RouteMode = 'fast' | 'sheltered' | 'accessible';
 

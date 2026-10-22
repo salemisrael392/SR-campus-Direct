@@ -1,3 +1,4 @@
+import { Destination, ClassSession, NavigationStep, CampusNotification } from '../types';
 import sruLogoPrimary from '../assets/sru_logo_primary.png';
 import sruLogoSecondary from '../assets/sru_logo_secondary.png';
 import sruEntranceGate from '../assets/sru_entrance_gate.jpg';
@@ -66,32 +67,18 @@ export const REAL_CAMPUS_DESTINATIONS: Destination[] = [
     buildingId: 'srec-block'
   },
   {
-    id: 'dest-cs-pavilion',
-    name: 'CS & AI Central Pavilion',
+    id: 'dest-cse-block',
+    name: 'SREC Computer Science & Engineering Block',
     category: 'lab',
-    description: '2.7 Lakh sq.ft Computing Complex, 1200-cap Hackathon Pavilion & Skybridges',
+    description: 'CSE Department, AI & Data Science Computing Labs, Room 204 & Project Studios',
     walkMinutes: 3,
     openStatus: 'Open 24/7 Access for Students',
-    accessibility: 'Dual elevators & connecting skybridges',
+    accessibility: 'Dual elevators & connecting corridors',
     locationLabel: 'North Quad • Level 2',
     imageUrl: iotZonePhoto,
     bookmarked: true,
     roomCode: 'Room 204',
-    buildingId: 'cs-pavilion'
-  },
-  {
-    id: 'dest-library',
-    name: 'Central University Library',
-    category: 'library',
-    description: 'Digital Knowledge Commons, Silent Study Rooms & Rooftop Amphitheater',
-    walkMinutes: 5,
-    openStatus: 'Open until 11:00 PM',
-    accessibility: 'Step-free entrance with elevator',
-    locationLabel: 'Academic Core • Central Quad',
-    imageUrl: libraryBuilding,
-    bookmarked: true,
-    roomCode: 'LIB-MAIN',
-    buildingId: 'central-library'
+    buildingId: 'cse-block'
   },
   {
     id: 'dest-srix',
@@ -106,6 +93,20 @@ export const REAL_CAMPUS_DESTINATIONS: Destination[] = [
     bookmarked: false,
     roomCode: 'SRIX-HUB',
     buildingId: 'srix-incubator'
+  },
+  {
+    id: 'dest-auditorium',
+    name: 'SR Central Auditorium & Seminar Complex',
+    category: 'hall',
+    description: 'Convention Auditorium 1, Seminar Theatres & Open Air Amphitheatre',
+    walkMinutes: 4,
+    openStatus: 'Open during academic events & symposiums',
+    accessibility: 'Step-free ground level entrances',
+    locationLabel: 'Academic Core • Central Quad',
+    imageUrl: libraryBuilding,
+    bookmarked: true,
+    roomCode: 'AUD-01',
+    buildingId: 'central-auditorium'
   },
   {
     id: 'dest-hostels',
@@ -162,7 +163,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
         name: 'Prof. Sarah Vance',
         avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCg9wfGU5eR1Kw-nGJtphAhpyDwXxFyEQ_hpNpiOxO1ynqJP3wUXx078qzNNJjE_nONhzsx-OoXhUbW9z3ubE4gmMietqkME9DCfO2r19_B3hD4qNHSCBeK8SU443U53NM1rrKsdeRQkWTR0NQJI4zQtOJt05pMP1K4yZXuLBtbGu4ZdxO1Cw9c7IxhP1QRcLaCMprGFWz_DyfjXfI7w_vNZpwJnf-o0yQ4e_882xZIh3I5Wsbq-6BE'
       },
-      building: 'CS & AI Central Pavilion',
+      building: 'SREC Computer Science Block',
       floor: 'Level 2',
       room: 'Room 204',
       walkMinutes: 4,
@@ -228,7 +229,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
         name: 'Dr. Marcus Reed',
         avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuA3MB-ENTL3AiGpORmtA0I-RA-l4PA8UvjicNkbvwth1mv9nayUuU_SKeQtvxOI1i7IgsVG6Sl7cBLWdF69iVIz_k1Nf_Xb3fv1LnzjiXm8kVCM5lrtHVuKTJhMdAVqZ6quoZ5VRqx83alFjoG70aLeTeiOnl-AjfnGvEDVnc88zsJJ0hYJlbZ0lHKIy8jx1fD00O3Ggz9RXNe0ICkoXaxVK2UO7OmTZG8E7wYc5v-6h-duoTHhS7LT'
       },
-      building: 'CS Pavilion',
+      building: 'SREC Computer Science Block',
       floor: '2nd Floor',
       room: 'Hall E-204',
       walkMinutes: 4,
@@ -314,7 +315,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
         name: 'Prof. Sarah Vance',
         avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCg9wfGU5eR1Kw-nGJtphAhpyDwXxFyEQ_hpNpiOxO1ynqJP3wUXx078qzNNJjE_nONhzsx-OoXhUbW9z3ubE4gmMietqkME9DCfO2r19_B3hD4qNHSCBeK8SU443U53NM1rrKsdeRQkWTR0NQJI4zQtOJt05pMP1K4yZXuLBtbGu4ZdxO1Cw9c7IxhP1QRcLaCMprGFWz_DyfjXfI7w_vNZpwJnf-o0yQ4e_882xZIh3I5Wsbq-6BE'
       },
-      building: 'CS Pavilion',
+      building: 'SREC Computer Science Block',
       floor: '3rd Floor',
       room: 'Room 312',
       walkMinutes: 5,
@@ -360,18 +361,18 @@ export const TURN_BY_TURN_STEPS: NavigationStep[] = [
   {
     id: 2,
     stepNumber: 2,
-    title: 'Enter CS & AI Central Pavilion',
-    description: 'Proceed through the glass skybridge entrance into the computing atrium.',
+    title: 'Enter SREC Computer Science Block',
+    description: 'Proceed through the main ground concourse into the CSE academic wing.',
     distanceMeters: 60,
     type: 'turn_right',
     badge: 'Step 2',
-    subBadge: 'North Pavilion Entrance'
+    subBadge: 'CSE Wing Entrance'
   },
   {
     id: 3,
     stepNumber: 3,
     title: 'Ascend Staircase B or Central Elevator',
-    description: 'Located behind the Pavilion Innovation Lounge. Ascend to Level 2.',
+    description: 'Located in the CSE concourse lobby. Ascend to Level 2.',
     distanceMeters: 35,
     type: 'stairs',
     badge: 'Step 3 • Indoor Floor Change',
@@ -387,7 +388,7 @@ export const TURN_BY_TURN_STEPS: NavigationStep[] = [
     badge: 'Step 4 • Arrival',
     hasVisualPreview: true,
     visualPreviewImg: sruEntranceGate,
-    visualPreviewNote: 'Room 204 • CS & AI Pavilion Level 2.'
+    visualPreviewNote: 'Room 204 • SREC CSE Block Level 2.'
   }
 ];
 
@@ -395,7 +396,7 @@ export const INITIAL_NOTIFICATIONS: CampusNotification[] = [
   {
     id: 'notif-1',
     title: 'Data Structures Starting in 24m',
-    description: 'CS & AI Central Pavilion Room 204 is unlocked. Estimated walk time: 4 minutes from Main Gate.',
+    description: 'SREC Computer Science Block Room 204 is unlocked. Estimated walk time: 4 minutes from Main Gate.',
     timestamp: '9:36 AM',
     type: 'class',
     unread: true

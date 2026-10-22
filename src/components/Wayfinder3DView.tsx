@@ -391,7 +391,7 @@ export const Wayfinder3DView: React.FC<Wayfinder3DViewProps> = ({
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sky-400" />
           </span>
           <span className="font-label-sm text-label-sm font-semibold tracking-wide text-sky-200">
-            AR Live Waypoint • Newton Hall L2
+            AR Live Waypoint • SREC CSE Block L2
           </span>
         </div>
 

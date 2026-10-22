@@ -19,26 +19,26 @@ export const VoiceNavigationModal: React.FC<VoiceNavigationModalProps> = ({
 
   const voiceSteps = [
     {
-      instruction: 'Head North past the Clock Tower',
-      detail: 'Continue straight for 120 meters along the stone pathway towards Academic Quad.',
+      instruction: 'Head North past Campus Entrance Gate 1',
+      detail: 'Continue straight for 120 meters along the tree-lined central avenue towards SREC Academic Quad.',
       distance: '120m',
       icon: 'straight'
     },
     {
-      instruction: 'In 60 meters, enter Newton Hall North Wing',
-      detail: 'Approach the automatic sliding glass air-lock doors into the main atrium.',
+      instruction: 'In 60 meters, enter SREC Computer Science Block',
+      detail: 'Approach the ground concourse entrance into the CSE academic wing.',
       distance: '60m',
       icon: 'turn_right'
     },
     {
       instruction: 'Take Staircase B or Central Elevator to Level 2',
-      detail: 'Located behind the Atrium Coffee Kiosk. Ascend to Level 2 breezeway.',
+      detail: 'Located in the CSE concourse lobby. Ascend to Level 2 breezeway.',
       distance: '35m',
       icon: 'stairs'
     },
     {
       instruction: 'Turn left down Computing Wing to Room 204',
-      detail: 'Your classroom is 30 meters ahead on your right. Look for the blue placard.',
+      detail: 'Your classroom is 30 meters ahead on your right. Adjacent to AI Research Lab.',
       distance: '30m',
       icon: 'turn_left'
     },
