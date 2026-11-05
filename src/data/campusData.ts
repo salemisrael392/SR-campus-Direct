@@ -153,6 +153,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
   24: [
     {
       id: 'cs301',
+      source: 'manual',
       code: 'CS301',
       title: 'CS301 • Data Structures & Algorithms',
       startTime: '10:00 AM',
@@ -175,6 +176,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
     },
     {
       id: 'ee210',
+      source: 'manual',
       code: 'EE210',
       title: 'EE210 • Digital Logic & Circuits',
       startTime: '01:00 PM',
@@ -196,6 +198,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
     },
     {
       id: 'math204',
+      source: 'manual',
       code: 'MATH204',
       title: 'MATH204 • Discrete Mathematics',
       startTime: '03:15 PM',
@@ -219,6 +222,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
   21: [
     {
       id: 'cs301-mon',
+      source: 'manual',
       code: 'CS301',
       title: 'Algorithms & Data Structures',
       startTime: '09:00 AM',
@@ -239,6 +243,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
     },
     {
       id: 'ee210l-mon',
+      source: 'manual',
       code: 'EE210L',
       title: 'Digital Logic Systems Lab',
       startTime: '11:30 AM',
@@ -261,6 +266,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
   22: [
     {
       id: 'cs240-tue',
+      source: 'manual',
       code: 'CS240',
       title: 'Database Architectures',
       startTime: '10:15 AM',
@@ -283,6 +289,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
   23: [
     {
       id: 'math204-wed',
+      source: 'manual',
       code: 'MATH204',
       title: 'Discrete Mathematics Tutorial',
       startTime: '11:00 AM',
@@ -305,6 +312,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
   25: [
     {
       id: 'cs390-fri',
+      source: 'manual',
       code: 'CS390',
       title: 'Software Engineering Workshop',
       startTime: '02:00 PM',
@@ -327,6 +335,7 @@ export const CLASSES_BY_DAY: Record<number, ClassSession[]> = {
   26: [
     {
       id: 'hack-sat',
+      source: 'manual',
       code: 'SR-CLUB',
       title: 'Autonomous Robotics Hack Session',
       startTime: '10:00 AM',
