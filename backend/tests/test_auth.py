@@ -25,7 +25,8 @@ def test_database(tmp_path, monkeypatch) -> Engine:
                     name TEXT,
                     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                    email_verified_at TIMESTAMP NULL
+                    email_verified_at TIMESTAMP NULL,
+                    profile_picture_url TEXT NULL
                 )
                 """
             )

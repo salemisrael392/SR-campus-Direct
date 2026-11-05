@@ -1,14 +1,22 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import check_database_connection
 from app.routes.auth import router as auth_router
+from app.routes.profile import router as profile_router
 from app.routes.srux import router as srux_router
 from app.routes.timetable import router as timetable_router
 
 
 settings = get_settings()
+
+# Persistent backend upload directory.
+UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(
     title=settings.app_name,
@@ -32,8 +40,16 @@ app.add_middleware(
 )
 
 app.include_router(auth_router, prefix=settings.api_prefix)
+app.include_router(profile_router, prefix=settings.api_prefix)
 app.include_router(timetable_router, prefix=settings.api_prefix)
 app.include_router(srux_router, prefix=settings.api_prefix)
+
+# Serve profile pictures and other uploaded media.
+app.mount(
+    "/media",
+    StaticFiles(directory=str(UPLOAD_DIR)),
+    name="media",
+)
 
 
 @app.get("/", tags=["system"])

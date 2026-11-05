@@ -18,6 +18,7 @@ class UserResponse(BaseModel):
     email: EmailStr
     name: str | None = None
     email_verified: bool
+    profile_picture_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

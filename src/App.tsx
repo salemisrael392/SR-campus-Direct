@@ -852,12 +852,13 @@ export default function App() {
         )}
 
         <Header
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          onOpenNotifications={() => setIsNotificationsOpen(true)}
-          onOpenProfile={() => handleTabChange('profile')}
-          unreadCount={2}
-          onQuickSearch={() => setIsQuickSearchOpen(true)}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        onOpenNotifications={() => setIsNotificationsOpen(true)}
+        onOpenProfile={() => handleTabChange('profile')}
+        user={currentUser}
+        unreadCount={2}
+        onQuickSearch={() => setIsQuickSearchOpen(true)}
         />
 
         <main className="w-full min-w-0 flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-10">
@@ -928,6 +929,8 @@ export default function App() {
             currentUser && (
               <ProfileView
                 user={currentUser}
+                authToken={authToken}
+                onUserUpdated={setCurrentUser}
                 onSignOut={handleSignOut}
                 onShowToast={showToast}
                 onNavigateToDest={handleNavigateTo}

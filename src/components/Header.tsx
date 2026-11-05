@@ -1,12 +1,19 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { TabType } from '../types';
 import { UNIVERSITY_INFO } from '../data/campusData';
+import type { AuthUser } from './AuthModal';
+
+const API_ORIGIN = (
+  import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+).replace(/\/api\/v1\/?$/, '');
 
 interface HeaderProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
+  user: AuthUser | null;
   unreadCount?: number;
   onQuickSearch?: () => void;
 }
@@ -16,13 +23,60 @@ export const Header: React.FC<HeaderProps> = ({
   onTabChange,
   onOpenNotifications,
   onOpenProfile,
+  user,
   unreadCount = 2,
   onQuickSearch
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const navItems: { tab: TabType; label: string; icon: string; desc: string }[] = [
+  // Generate the account display name from the authenticated user.
+  const getDisplayName = () => {
+    const fullName = user?.name?.trim();
+
+    if (fullName) {
+      const parts = fullName.split(/\s+/).filter(Boolean);
+
+      if (parts.length >= 2) {
+        return `${parts[0].charAt(0).toUpperCase()}. ${parts[parts.length - 1]}`;
+      }
+
+      return parts[0];
+    }
+
+    return user?.email || 'Account';
+  };
+
+  // Generate avatar initials from the authenticated user.
+  const getAvatarInitials = () => {
+    const fullName = user?.name?.trim();
+
+    if (fullName) {
+      const parts = fullName.split(/\s+/).filter(Boolean);
+
+      if (parts.length >= 2) {
+        return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+      }
+
+      return parts[0].substring(0, 2).toUpperCase();
+    }
+
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+
+    return 'U';
+  };
+
+  const displayName = getDisplayName();
+  const avatarInitials = getAvatarInitials();
+
+  const navItems: {
+    tab: TabType;
+    label: string;
+    icon: string;
+    desc: string;
+  }[] = [
     {
       tab: 'explore',
       label: 'Campus Map',
@@ -49,15 +103,17 @@ export const Header: React.FC<HeaderProps> = ({
     }
   ];
 
-  const currentNavItem = navItems.find(item => item.tab === activeTab) || navItems[0];
+  const currentNavItem =
+    navItems.find(item => item.tab === activeTab) || navItems[0];
 
-  // Close dropdown on click outside or Escape key
+  // Close dropdown on click outside or Escape key.
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setIsMenuOpen(false);
       }
     };
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isMenuOpen) {
         setIsMenuOpen(false);
@@ -66,6 +122,7 @@ export const Header: React.FC<HeaderProps> = ({
 
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
@@ -81,7 +138,8 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Left: Clean Logo Only (No text next to it) */}
+
+          {/* Left: University Logo and Navigation */}
           <div className="flex items-center gap-4">
             <button
               onClick={() => onTabChange('explore')}
@@ -96,7 +154,7 @@ export const Header: React.FC<HeaderProps> = ({
               />
             </button>
 
-            {/* Menu Dropdown Trigger Button */}
+            {/* Menu Dropdown Trigger */}
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -111,9 +169,11 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="material-symbols-outlined text-[19px] text-secondary">
                   menu
                 </span>
+
                 <span className="font-bold text-slate-900">
                   {currentNavItem.label}
                 </span>
+
                 <span
                   className={`material-symbols-outlined text-[18px] text-slate-500 transition-transform duration-200 ${
                     isMenuOpen ? 'rotate-180' : ''
@@ -126,7 +186,8 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Menu Dropdown Panel */}
               {isMenuOpen && (
                 <div className="absolute left-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
-                  {/* Dropdown Section: Subpages */}
+
+                  {/* Campus Subpages */}
                   <div className="p-2 border-b border-slate-100 bg-slate-50/50">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1 block">
                       Campus Subpages
@@ -136,6 +197,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="p-2 space-y-1">
                     {navItems.map(item => {
                       const isActive = activeTab === item.tab;
+
                       return (
                         <button
                           key={item.tab}
@@ -157,14 +219,17 @@ export const Header: React.FC<HeaderProps> = ({
                               {item.icon}
                             </span>
                           </div>
+
                           <div className="min-w-0 flex-1">
                             <span className="text-xs font-bold block text-slate-900 leading-tight">
                               {item.label}
                             </span>
+
                             <span className="text-[11px] text-slate-500 block truncate mt-0.5">
                               {item.desc}
                             </span>
                           </div>
+
                           {isActive && (
                             <span className="material-symbols-outlined text-[18px] text-secondary shrink-0 mt-1">
                               check
@@ -175,7 +240,7 @@ export const Header: React.FC<HeaderProps> = ({
                     })}
                   </div>
 
-                  {/* Dropdown Section: Quick Tools */}
+                  {/* Quick Tools and Support */}
                   <div className="p-2 border-t border-slate-100 bg-slate-50/50">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1 block">
                       Quick Tools &amp; Support
@@ -195,10 +260,12 @@ export const Header: React.FC<HeaderProps> = ({
                           <span className="material-symbols-outlined text-[19px] text-slate-500">
                             search
                           </span>
+
                           <span className="text-xs font-semibold text-slate-800">
                             Find Room / Block
                           </span>
                         </div>
+
                         <kbd className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 text-slate-500">
                           ⌘K
                         </kbd>
@@ -216,10 +283,12 @@ export const Header: React.FC<HeaderProps> = ({
                         <span className="material-symbols-outlined text-[19px] text-slate-500">
                           notifications
                         </span>
+
                         <span className="text-xs font-semibold text-slate-800">
                           Announcements &amp; Alerts
                         </span>
                       </div>
+
                       {unreadCount > 0 && (
                         <span className="px-1.5 py-0.2 rounded-full bg-secondary text-white text-[10px] font-bold">
                           {unreadCount} new
@@ -235,10 +304,12 @@ export const Header: React.FC<HeaderProps> = ({
                         <span className="material-symbols-outlined text-[19px] text-red-600">
                           call
                         </span>
+
                         <span className="text-xs font-semibold text-red-700">
                           Emergency SOS Dispatch
                         </span>
                       </div>
+
                       <span className="text-[10px] font-mono text-red-500 font-bold">
                         24/7
                       </span>
@@ -249,32 +320,43 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Right: Student Profile (Left where it is) */}
+          {/* Right: Authenticated User Profile */}
           <div className="flex items-center">
             <button
               onClick={onOpenProfile}
-              aria-label="User Profile"
+              aria-label={`User Profile: ${displayName}`}
+              title={user?.email || 'User Account'}
               className={`flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-xl border transition-all shadow-2xs active:scale-95 ${
                 activeTab === 'profile'
                   ? 'border-secondary bg-blue-50/60 ring-2 ring-secondary/20'
                   : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50'
               }`}
             >
-              <img
-                alt={UNIVERSITY_INFO.user.name}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover ring-1 ring-slate-200"
-                src={UNIVERSITY_INFO.user.avatar}
-              />
-              <div className="flex flex-col text-left">
-                <span className="text-xs font-bold text-slate-800 leading-tight">
-                  {UNIVERSITY_INFO.user.name}
+              {/* Profile Picture or Generated Initials */}
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden flex items-center justify-center bg-blue-100 text-blue-700 text-[11px] sm:text-xs font-bold ring-1 ring-blue-200 shrink-0">
+                {user?.profile_picture_url ? (
+                  <img
+                    src={`${API_ORIGIN}${user.profile_picture_url}`}
+                    alt={`${displayName}'s profile`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span aria-hidden="true">{avatarInitials}</span>
+                )}
+              </div>
+
+              <div className="flex flex-col text-left min-w-0">
+                <span className="text-xs font-bold text-slate-800 leading-tight max-w-[110px] truncate">
+                  {displayName}
                 </span>
-                <span className="text-[10px] text-slate-400 hidden sm:block leading-none">
-                  Student Account
+
+                <span className="text-[10px] text-slate-400 hidden sm:block leading-none max-w-[150px] truncate">
+                  {user?.email || 'Sign in to your account'}
                 </span>
               </div>
             </button>
           </div>
+
         </div>
       </div>
     </header>

@@ -37,6 +37,7 @@ def _issue_auth_response(
     email: str,
     name: str | None,
     email_verified: bool,
+    profile_picture_url: str | None = None,
 ) -> AuthResponse:
     settings = get_settings()
 
@@ -48,6 +49,7 @@ def _issue_auth_response(
             email=email,
             name=name,
             email_verified=email_verified,
+            profile_picture_url=profile_picture_url,
         ),
     )
 
@@ -170,6 +172,7 @@ def login(payload: LoginRequest) -> AuthResponse:
                         users.id,
                         users.email,
                         users.name,
+                        users.profile_picture_url,
                         users.email_verified_at,
                         user_credentials.password_hash
                     FROM users
@@ -214,6 +217,7 @@ def login(payload: LoginRequest) -> AuthResponse:
         email=row["email"],
         name=row["name"],
         email_verified=email_verified,
+        profile_picture_url=row["profile_picture_url"],
     )
 
 
@@ -247,7 +251,12 @@ def get_current_user(
             row = connection.execute(
                 text(
                     """
-                    SELECT id, email, name, email_verified_at
+                    SELECT
+                        id,
+                        email,
+                        name,
+                        email_verified_at,
+                        profile_picture_url
                     FROM users
                     WHERE id = :user_id
                     LIMIT 1
@@ -270,4 +279,5 @@ def get_current_user(
         email=row["email"],
         name=row["name"],
         email_verified=row["email_verified_at"] is not None,
+        profile_picture_url=row["profile_picture_url"],
     )

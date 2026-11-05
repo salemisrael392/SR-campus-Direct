@@ -5,6 +5,7 @@ export interface AuthUser {
   email: string;
   name: string | null;
   email_verified: boolean;
+  profile_picture_url: string | null;
 }
 
 interface AuthResponse {

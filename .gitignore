@@ -7,3 +7,6 @@ coverage/
 .env*
 !.env.example
 .gmp_cache/
+
+# User-uploaded profile pictures
+backend/uploads/
