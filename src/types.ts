@@ -25,6 +25,7 @@ export interface ClassSession {
   statusText?: string;
   day: string;
   dateNumber: number;
+  source: 'manual' | 'upload' | 'official';
 }
 
 export interface Destination {
