@@ -1,0 +1,6 @@
+{
+  "name": "SR Campus Direct",
+  "description": "Smart campus indoor & outdoor wayfinding, interactive 3D AR navigation, live class timetable sync, and RTLS directional guidance for SR University.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
